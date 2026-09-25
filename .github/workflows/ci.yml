@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      # The tests sign bundles through apksig's KMS extension point with a local key standing
+      # in for Cloud KMS, and verify them with the JDK and jarsigner.
+      - run: ./gradlew test distZip
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: build
+          path: |
+            build/distributions/
+            build/reports/
