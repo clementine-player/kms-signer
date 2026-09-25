@@ -35,7 +35,7 @@ and its SHA-256. Workflows should pin a version and check the checksum before ru
 signs releases:
 
 ```sh
-version=1.0.0
+version=2026.09.25-abc1234  # a version from the releases page
 gh release download "v$version" --repo clementine-player/kms-signer \
   --pattern "kms-signer-$version.zip*"
 echo "<sha256 from the release>  kms-signer-$version.zip" | sha256sum --check
@@ -74,6 +74,10 @@ local key standing in for Cloud KMS, and checks them with the JDK's JAR verifica
 
 ## Releasing
 
-Push a tag `vX.Y.Z` on `main`. The release workflow runs the tests, builds
-`kms-signer-X.Y.Z.zip`, and publishes it with its SHA-256 as a GitHub release. Then update the
-version and checksum where it's used (Clementine Remote's `.github/workflows/play.yml`).
+Releases are automatic, like Clementine's: every push to `main` that changes the signer (its
+code or build) runs the tests and publishes version `YYYY.MM.DD-<commit>` as a GitHub release
+tagged `v<version>`, with `kms-signer-<version>.zip` and its SHA-256. Changes to the docs alone
+don't release. The release workflow can also be run by hand.
+
+Projects pin a version and its checksum, so a new release changes nothing until they update
+both (Clementine Remote's `.github/workflows/play.yml`).
