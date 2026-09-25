@@ -1,12 +1,25 @@
-# Publishes a release for a version tag (v1.2.3): the distribution zip and its SHA-256, which
-# workflows that sign releases download and check before running it.
+# Publishes a release for every change to the signer on main, like Clementine's releases:
+# version YYYY.MM.DD-<commit>, a GitHub release tagged v<version> with the distribution zip and
+# its SHA-256, which workflows that sign releases download and check before running it.
 name: release
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths:
+      - src/**
+      - build.gradle.kts
+      - settings.gradle.kts
+      - gradle/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+# One release at a time, in push order.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
-  contents: write # to create the release
+  contents: write # to tag and publish the release
 
 jobs:
   release:
@@ -18,15 +31,22 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v5
+      - name: Version
+        id: version
+        run: |
+          version="$(date -u +%Y.%m.%d)-$(git rev-parse --short=7 HEAD)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing $version"
       - name: Build
-        run: ./gradlew test distZip -Pversion="${GITHUB_REF_NAME#v}"
+        run: ./gradlew test distZip -Pversion=${{ steps.version.outputs.version }}
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           cd build/distributions
-          zip="kms-signer-${GITHUB_REF_NAME#v}.zip"
+          zip="kms-signer-$VERSION.zip"
           sha256sum "$zip" > "$zip.sha256"
           cat "$zip.sha256"
-          gh release create "$GITHUB_REF_NAME" "$zip" "$zip.sha256" \
-            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release create "v$VERSION" "$zip" "$zip.sha256" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "$VERSION" --generate-notes
