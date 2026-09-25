@@ -1,0 +1,32 @@
+# Publishes a release for a version tag (v1.2.3): the distribution zip and its SHA-256, which
+# workflows that sign releases download and check before running it.
+name: release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Build
+        run: ./gradlew test distZip -Pversion="${GITHUB_REF_NAME#v}"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd build/distributions
+          zip="kms-signer-${GITHUB_REF_NAME#v}.zip"
+          sha256sum "$zip" > "$zip.sha256"
+          cat "$zip.sha256"
+          gh release create "$GITHUB_REF_NAME" "$zip" "$zip.sha256" \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

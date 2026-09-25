@@ -3,6 +3,9 @@ plugins {
     application
 }
 
+// Releases pass the tag's version (-Pversion=1.2.3); local builds are "dev".
+version = providers.gradleProperty("version").getOrElse("dev")
+
 dependencies {
     // Google's own signing implementation, the same code apksigner and the Android Gradle
     // plugin use. This tool only supplies the signatures, from Cloud KMS.
